@@ -13,3 +13,14 @@
 
 ### Add a recipe view
 <img width="431" height="934" alt="add_recipe" src="https://github.com/user-attachments/assets/93171198-fd26-49f5-9820-63a71363d34c" />
+
+## Diagrams
+### C1
+<img width="220" height="428" alt="c1" src="https://github.com/user-attachments/assets/2294ed01-e7d5-434e-bc22-1ff723f1218b" />
+
+### C2
+<img width="276" height="796" alt="c2" src="https://github.com/user-attachments/assets/71d766f8-6121-460f-8a86-3bc2d1a9970c" />
+
+### C3
+<img width="1654" height="820" alt="c3-flutter" src="https://github.com/user-attachments/assets/e721987d-40ba-4915-be73-d1f031ae7a11" />
+<img width="552" height="906" alt="c3-spring" src="https://github.com/user-attachments/assets/53edd268-f190-4184-9dbe-e128b8fec364" />
