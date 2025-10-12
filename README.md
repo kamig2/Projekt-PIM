@@ -1,18 +1,18 @@
 # Projekt-PIM
 ### Registration view
-<img width="431" height="934" alt="registration" src="https://github.com/user-attachments/assets/a8a82836-8274-456f-8858-239b397f251b" />
+<img width="400" height="850" alt="register" src="https://github.com/user-attachments/assets/2bd7974e-b59e-4c9b-bece-045c65e192cc" />
 
 ### Log in view
-<img width="431" height="934" alt="login" src="https://github.com/user-attachments/assets/5b97bed8-5fdd-4c17-b302-37bff251919f" />
+<img width="400" height="850" alt="sign" src="https://github.com/user-attachments/assets/1410325c-04ec-42ce-b45a-a06c26aefbd9" />
 
 ### Recipe List view
-<img width="242" height="526" alt="recipeListView" src="https://github.com/user-attachments/assets/0937e7e2-f035-4d84-8656-f062565d98af" />
+<img width="400" height="850" alt="recipeListView" src="https://github.com/user-attachments/assets/0937e7e2-f035-4d84-8656-f062565d98af" />
 
 ### Recipe Detail view
-<img width="242" height="529" alt="recipeDetailView" src="https://github.com/user-attachments/assets/8640d734-4349-4fa7-b2f8-d0b8c145af36" />
+<img width="400" height="850" alt="recipeDetailView" src="https://github.com/user-attachments/assets/8640d734-4349-4fa7-b2f8-d0b8c145af36" />
 
 ### Add a recipe view
-<img width="431" height="934" alt="add_recipe" src="https://github.com/user-attachments/assets/93171198-fd26-49f5-9820-63a71363d34c" />
+<img width="400" height="850" alt="recipe" src="https://github.com/user-attachments/assets/7e05a482-6b9f-467b-9d74-93dee1bf9481" />
 
 ## Diagrams
 ### C1
