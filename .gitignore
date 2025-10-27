@@ -1,0 +1,55 @@
+# ------------------------
+# Flutter / Dart
+# ------------------------
+# Dart / Flutter tools
+recipe-app/.dart_tool/
+recipe-app/.flutter-plugins
+recipe-app/.flutter-plugins-dependencies
+recipe-app/.packages
+recipe-app/pubspec.lock
+recipe-app/.pub-cache/
+recipe-app/.pub/
+recipe-app/build/
+recipe-app/coverage/
+
+# iOS
+recipe-app/ios/Flutter/.last_build_id
+
+# macOS
+recipe-app/macOS/Flutter/Flutter.podspec
+
+# Android Studio / IDE
+recipe-app/.idea/
+recipe-app/*.iml
+recipe-app/*.ipr
+recipe-app/*.iws
+
+# VSCode
+# recipe-app/.vscode/
+
+# Misc
+recipe-app/.DS_Store
+recipe-app/*.log
+recipe-app/*.swp
+
+# ------------------------
+# Java / Spring Boot
+# ------------------------
+# Build output
+api/build/
+api/out/
+
+# Maven / Gradle
+api/.gradle/
+api/build/
+api/.mvn/
+api/.idea/
+api/*.iml
+
+# Logs
+api/*.log
+
+# OS / Misc
+api/.DS_Store
+api/*.class
+api/.history
