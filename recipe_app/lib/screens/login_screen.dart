@@ -81,6 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () {
                       // TODO: logika logowania
                       print("login clicked!");
+                      Navigator.pushReplacementNamed(context, '/recipes');
                     },
                     child: const Text('Sign In'),
                   ),

@@ -88,6 +88,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     onPressed: () {
                       //todo: logika rejestracji
                       print("Register clicked!");
+                      Navigator.pushReplacementNamed(context, '/recipes');
                     },
                     child: const Text('Sign Up'),
                   ),
