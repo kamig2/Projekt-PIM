@@ -13,9 +13,10 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
 
 
   final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _ingredientsController = TextEditingController();
+  final TextEditingController _ingredientController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _timeController = TextEditingController();
+  final List<String> _ingredients = [];
 
   @override
   Widget build(BuildContext context) {
@@ -58,17 +59,50 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
               const SizedBox(height: 16),
 
               // Ingredients
-              TextFormField(
-                controller: _ingredientsController,
-                decoration: InputDecoration(
-                  labelText: 'Ingredients',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _ingredientController,
+                      decoration: InputDecoration(
+                        labelText: 'Ingredient',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      final ingredient = _ingredientController.text.trim();
+                      if (ingredient.isNotEmpty) {
+                        setState(() {
+                          _ingredients.add(ingredient);
+                          _ingredientController.clear();
+                        });
+                      }
+                    },
+                    child: const Text('Add'),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              // Wyświetlanie dodanych składników
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: _ingredients
+                    .map((ing) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          child: Text('• $ing', style: TextStyle(fontSize: 16)),
+                        ))
+                    .toList(),
               ),
               const SizedBox(height: 16),
+
 
               // Description
               TextFormField(
