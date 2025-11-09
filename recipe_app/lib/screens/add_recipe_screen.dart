@@ -60,6 +60,18 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     });
   }
 
+  // Usuwanie danych po przeslaniu lub odrzuceniu nowego przepisu
+  void _resetForm() {
+    _titleController.clear();
+    _ingredientController.clear();
+    _descriptionController.clear();
+    _ingredients.clear();
+    _selectedHour = null;
+    _selectedMinute = null;
+    _selectedFiles.clear();
+    _selectedFilesWeb.clear();
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -237,7 +249,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<int>(
-                          value: _selectedHour,
+                          initialValue: _selectedHour,
                           decoration: InputDecoration(
                             labelText: 'Hours',
                             border: OutlineInputBorder(
@@ -263,7 +275,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: DropdownButtonFormField<int>(
-                          value: _selectedMinute,
+                          initialValue: _selectedMinute,
                           decoration: InputDecoration(
                             labelText: 'Minutes',
                             border: OutlineInputBorder(
@@ -355,7 +367,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                               right: 4,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.6),
+                                  color: Color.fromRGBO(0, 0, 0, 0.6),
                                   shape: BoxShape.circle,
                                 ),
                                 child: InkWell(
@@ -384,6 +396,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
               // Upload button
               ElevatedButton(
                 onPressed: () {
+                  _resetForm();
                   widget.onCancel?.call();
                 },
                 style: ElevatedButton.styleFrom(
@@ -407,6 +420,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
               // Cancel button
               OutlinedButton(
                 onPressed: () {
+                  _resetForm();
                   widget.onCancel?.call();
                 },
                 style: OutlinedButton.styleFrom(
