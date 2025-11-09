@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import 'package:recipe_app/screens/add_recipe_screen.dart'; 
+
 import 'package:recipe_app/screens/recipe_detail_screen.dart';
+
 
 // --- Model Danych ---
 //klasa do przechowywania informacji o przepisie
@@ -216,6 +220,7 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
     );
   }
 
+/*
   Widget _buildAddTab() {
     return Scaffold(
       backgroundColor: lightBackground,
@@ -242,6 +247,17 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
           ),
         ),
       ),
+    );
+  }
+*/
+
+  Widget _buildAddTab() {
+    return AddRecipeScreen(
+      onCancel: () {
+        setState(() {
+          _selectedIndex = 0; // wróć do listy przepisów
+        });
+      },
     );
   }
 
