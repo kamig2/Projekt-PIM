@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import 'package:recipe_app/screens/add_recipe_screen.dart'; 
+
+import 'package:recipe_app/screens/recipe_detail_screen.dart';
+
+
 // --- Model Danych ---
 //klasa do przechowywania informacji o przepisie
 class Recipe {
@@ -395,92 +400,95 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
   }
 
   Widget _buildRecipeCard(Recipe recipe) {
-    // Sprawdzamy, czy ten przepis jest ulubiony
     final bool isFavorite = _isFavorite(recipe);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-      child: Container(
-        padding: const EdgeInsets.all(12.0),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16.0),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RecipeDetailScreen(recipe: recipe),
             ),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Obrazek
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12.0),
-              child: Image.network(
-                recipe.imageUrl,
-                width: 170,
-                height: 120,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 120,
-                    height: 120,
-                    color: Colors.grey[200],
-                    child: Icon(Icons.image_not_supported,
-                        color: Colors.grey[400]),
-                  );
-                },
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(12.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16.0),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
               ),
-            ),
-            const SizedBox(width: 16),
-            // Kolumna z tekstem i przyciskiem
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    recipe.title,
-                    style: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: primaryPurple,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    recipe.duration,
-                    style: GoogleFonts.inter(
-                      color: Colors.grey.shade700,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // Przycisk "Ulubione" (serduszko)
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12.0),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: IconButton(
-                      icon: Icon(
-                        isFavorite ? Icons.favorite : Icons.favorite_border,
-                        color: isFavorite ? primaryPurple : Colors.grey.shade500,
-                        size: 24,
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Obrazek
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12.0),
+                child: Image.network(
+                  recipe.imageUrl,
+                  width: 170,
+                  height: 120,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Kolumna z tekstem i przyciskiem
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      recipe.title,
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: primaryPurple,
                       ),
-                      onPressed: () {
-                        _toggleFavorite(recipe);
-                      },
                     ),
-                  )
-                ],
+                    const SizedBox(height: 8),
+                    Text(
+                      recipe.duration,
+                      style: GoogleFonts.inter(
+                        color: Colors.grey.shade700,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12.0),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          isFavorite
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          color: isFavorite
+                              ? primaryPurple
+                              : Colors.grey.shade500,
+                          size: 24,
+                        ),
+                        onPressed: () {
+                          _toggleFavorite(recipe);
+                        },
+                      ),
+                    )
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
