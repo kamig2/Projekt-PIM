@@ -247,7 +247,13 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
 */
 
   Widget _buildAddTab() {
-    return const AddRecipeScreen();
+    return AddRecipeScreen(
+      onCancel: () {
+        setState(() {
+          _selectedIndex = 0; // wróć do listy przepisów
+        });
+      },
+    );
   }
 
   Widget _buildProfileTab() {

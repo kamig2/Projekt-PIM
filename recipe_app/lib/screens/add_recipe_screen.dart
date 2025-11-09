@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:file_picker/file_picker.dart';
+
 class AddRecipeScreen extends StatefulWidget {
-  const AddRecipeScreen({super.key});
+  final VoidCallback? onCancel;
+
+  const AddRecipeScreen({super.key, this.onCancel});
 
   @override
   State<AddRecipeScreen> createState() => _AddRecipeScreenState();
@@ -18,6 +25,40 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
   final List<String> _ingredients = [];
   int? _selectedHour;
   int? _selectedMinute;
+
+  // pliki zdjęć
+  List<File> _selectedFiles = [];         // mobilnie
+  List<Uint8List> _selectedFilesWeb = []; // webowo
+
+ // Funkcja wyboru zdjęć
+  Future<void> _pickFiles() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: true,
+      withData: kIsWeb,
+    );
+
+    if (result != null) {
+      setState(() {
+        if (kIsWeb) {
+          _selectedFilesWeb.addAll(result.files.map((file) => file.bytes!).toList());
+        } else {
+          _selectedFiles.addAll(result.paths.map((path) => File(path!)).toList());
+        }
+      });
+    }
+  }
+
+  // Usunięcie miniatury
+  void _removeFile(int index) {
+    setState(() {
+      if (kIsWeb) {
+        _selectedFilesWeb.removeAt(index);
+      } else {
+        _selectedFiles.removeAt(index);
+      }
+    });
+  }
 
 
   @override
@@ -102,7 +143,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          //backgroundColor: primaryPurple,
+                          backgroundColor: primaryPurple,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -127,13 +168,36 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                   // Wyświetlanie dodanych składników
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: _ingredients
-                        .map((ing) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4.0),
-                              child: Text('• $ing', style: const TextStyle(fontSize: 16)),
-                            ))
-                        .toList(),
+                    children: _ingredients.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final ing = entry.value;
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '• $ing',
+                                style: const TextStyle(fontSize: 16),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                              onPressed: () {
+                                setState(() {
+                                  _ingredients.removeAt(index);
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
                   ),
+
                   const SizedBox(height: 16),
                 ],
               ),
@@ -231,11 +295,17 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
 
               // Photo upload 
               OutlinedButton.icon(
-                onPressed: () {
-                  // wybór pliku
-                },
+                onPressed: _pickFiles,
                 icon: const Icon(Icons.attach_file),
-                label: const Text('File'),
+                label: Text(
+                  kIsWeb
+                      ? (_selectedFilesWeb.isEmpty
+                          ? 'Select photos'
+                          : '${_selectedFilesWeb.length} photo(s) selected')
+                      : (_selectedFiles.isEmpty
+                          ? 'Select photos'
+                          : '${_selectedFiles.length} photo(s) selected'),
+                ),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: Colors.white,
@@ -243,12 +313,78 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                       borderRadius: BorderRadius.circular(12)),
                 ),
               ),
+
+              const SizedBox(height: 12),
+
+              // Miniaturki zdjęć
+              if ((kIsWeb && _selectedFilesWeb.isNotEmpty) ||
+                  (!kIsWeb && _selectedFiles.isNotEmpty))
+                SizedBox(
+                  height: 100,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: kIsWeb ? _selectedFilesWeb.length : _selectedFiles.length,
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Stack(
+                          alignment: Alignment.topRight,
+                          children: [
+
+                            // Miniaturka zdjęcia
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: kIsWeb
+                                  ? Image.memory(
+                                      _selectedFilesWeb[index],
+                                      width: 100,
+                                      height: 100,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Image.file(
+                                      _selectedFiles[index],
+                                      width: 100,
+                                      height: 100,
+                                      fit: BoxFit.cover,
+                                    ),
+                            ),
+
+                          // Przycisk X do usuwania zdjęcia
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.6),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: InkWell(
+                                  onTap: () => _removeFile(index),
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(4),
+                                    child: Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+
               const SizedBox(height: 24),
 
               // Upload button
               ElevatedButton(
                 onPressed: () {
-                  // ...
+                  widget.onCancel?.call();
                 },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -265,6 +401,31 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                   ),
                 ),
               ),
+
+              const SizedBox(height: 12),
+
+              // Cancel button
+              OutlinedButton(
+                onPressed: () {
+                  widget.onCancel?.call();
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  side: const BorderSide(color: Color(0xFF2D0C57)), 
+                ),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: const Color(0xFF2D0C57),
+                  ),
+                ),
+              ),
+
             ],
           ),
         ),
@@ -272,3 +433,11 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     );
   }
 }
+
+
+
+
+
+
+
+
