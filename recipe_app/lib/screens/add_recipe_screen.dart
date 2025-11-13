@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
+import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -23,12 +23,24 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
   final TextEditingController _ingredientController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final List<String> _ingredients = [];
+  final ImagePicker _picker = ImagePicker();
   int? _selectedHour;
   int? _selectedMinute;
 
   // pliki zdjęć
   List<File> _selectedFiles = [];         // mobilnie
   List<Uint8List> _selectedFilesWeb = []; // webowo
+
+  // Funkcja do zrobienia zdjęcia
+  Future<void> _takePhoto() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+    if (image != null) {
+      setState(() {
+        _selectedFiles.add(File(image.path)); // mobilnie
+        // jeśli web, użyj innego sposobu, np. image.bytes
+      });
+    }
+  }
 
  // Funkcja wyboru zdjęć
   Future<void> _pickFiles() async {
@@ -306,25 +318,44 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
 
 
               // Photo upload 
-              OutlinedButton.icon(
-                onPressed: _pickFiles,
-                icon: const Icon(Icons.attach_file),
-                label: Text(
-                  kIsWeb
-                      ? (_selectedFilesWeb.isEmpty
-                          ? 'Select photos'
-                          : '${_selectedFilesWeb.length} photo(s) selected')
-                      : (_selectedFiles.isEmpty
-                          ? 'Select photos'
-                          : '${_selectedFiles.length} photo(s) selected'),
-                ),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _pickFiles,
+                      icon: const Icon(Icons.attach_file),
+                      label: Text(
+                        kIsWeb
+                            ? (_selectedFilesWeb.isEmpty
+                            ? 'Select photos'
+                            : '${_selectedFilesWeb.length} photo(s) selected')
+                            : (_selectedFiles.isEmpty
+                            ? 'Select photos'
+                            : '${_selectedFiles.length} photo(s) selected'),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: _takePhoto,
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Take photo'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
               ),
+
 
               const SizedBox(height: 12),
 
