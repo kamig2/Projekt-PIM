@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:recipe_app/services/auth_service.dart';
+
+import '../services/token_storage.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -78,10 +81,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: () {
-                      // TODO: logika logowania
-                      print("login clicked!");
-                      Navigator.pushReplacementNamed(context, '/recipes');
+                    onPressed: () async {
+                      final result = await AuthService.login(
+                        usernameController.text,
+                        passwordController.text,
+                      );
+
+                      if (result != null) {
+                        print("Zalogowano: $result");
+                        await TokenStorage.saveToken(result["token"]);
+
+
+                        Navigator.pushReplacementNamed(context, '/recipes');
+                      } else {
+                        print("Błąd logowania");
+                      }
                     },
                     child: const Text('Sign In'),
                   ),

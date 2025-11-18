@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import '../services/token_storage.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -85,10 +87,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: () {
-                      //todo: logika rejestracji
-                      print("Register clicked!");
-                      Navigator.pushReplacementNamed(context, '/recipes');
+                    onPressed: () async {
+                      final result = await AuthService.register(
+                        name: nameController.text,
+                        surname: surnameController.text,
+                        username: usernameController.text,
+                        password: passwordController.text,
+                      );
+
+                      if (result != null) {
+                        print("Zarejestrowano: $result");
+                        await TokenStorage.saveToken(result["token"]);
+                        Navigator.pushReplacementNamed(context, '/recipes');
+                      } else {
+                        print("Błąd rejestracji");
+                      }
                     },
                     child: const Text('Sign Up'),
                   ),
