@@ -193,6 +193,7 @@ public class RecipeService {
                 .description(recipe.getDescription())
                 .username(recipe.getUser().getUsername())
                 .rating(recipe.getRating())
+                .preparationTime(recipe.getPreparationTime())
                 .date(recipe.getDate())
                 .imageUrls(recipe.getImageUrls())
                 .build();

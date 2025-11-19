@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'recipe_list_screen.dart';
+// Poniższy import jest KLUCZOWY - mówi temu ekranowi czym jest "Recipe"
+import 'package:recipe_app/models/recipe.dart';
 
 class RecipeDetailScreen extends StatelessWidget {
   final Recipe recipe;
@@ -18,6 +19,7 @@ class RecipeDetailScreen extends StatelessWidget {
         backgroundColor: lightBackground,
         elevation: 0,
         iconTheme: const IconThemeData(color: primaryPurple),
+        // Wyświetlamy prawdziwy tytuł z bazy
         title: Text(
           recipe.title,
           style: GoogleFonts.inter(
@@ -44,9 +46,17 @@ class RecipeDetailScreen extends StatelessWidget {
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
                       height: 220,
+                      width: double.infinity,
                       color: Colors.grey[200],
-                      child: Icon(Icons.image_not_supported,
-                          color: Colors.grey[400], size: 60),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.image_not_supported,
+                              color: Colors.grey[400], size: 60),
+                          const SizedBox(height: 8),
+                          Text("Brak zdjęcia", style: TextStyle(color: Colors.grey[500]))
+                        ],
+                      ),
                     );
                   },
                 ),
@@ -70,7 +80,7 @@ class RecipeDetailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // Sekcja: Składniki
+              // Sekcja: Składniki (Dane z bazy)
               Text(
                 "Ingredients",
                 style: GoogleFonts.inter(
@@ -80,19 +90,33 @@ class RecipeDetailScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              _buildPlaceholderList([
-                "2 cups of flour",
-                "1 tbsp of olive oil",
-                "Salt and pepper to taste",
-                "1 onion, chopped",
-                "1 cup of water",
-              ]),
+              // Wyświetlamy składniki z obiektu recipe.
+              // Jeśli w bazie są oddzielone przecinkami lub nowymi liniami, wyświetlą się tutaj.
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Text(
+                  recipe.ingredients.isNotEmpty
+                      ? recipe.ingredients
+                      : "No ingredients info provided.",
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    color: Colors.grey.shade800,
+                    height: 1.5,
+                  ),
+                ),
+              ),
 
               const SizedBox(height: 24),
 
-              // Sekcja: Instrukcje
+              // Sekcja: Instrukcje / Opis (Dane z bazy)
               Text(
-                "Instructions",
+                "Description & Instructions",
                 style: GoogleFonts.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -100,48 +124,30 @@ class RecipeDetailScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              Text(
-                "1. Preheat your oven to 180°C.\n"
-                    "2. Mix all ingredients in a large bowl.\n"
-                    "3. Pour the mixture into a baking dish.\n"
-                    "4. Bake for 30–40 minutes until golden brown.\n"
-                    "5. Let it cool before serving.",
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  color: Colors.grey.shade800,
-                  height: 1.6,
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Text(
+                  recipe.description.isNotEmpty
+                      ? recipe.description
+                      : "No description provided.",
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    color: Colors.grey.shade800,
+                    height: 1.6,
+                  ),
                 ),
               ),
+              const SizedBox(height: 40),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildPlaceholderList(List<String> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: items.map((ingredient) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6.0),
-          child: Row(
-            children: [
-              const Icon(Icons.circle, size: 6, color: primaryPurple),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  ingredient,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    color: Colors.grey.shade800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
     );
   }
 }

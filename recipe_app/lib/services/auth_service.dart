@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  static const String baseUrl = "http://localhost:8080"; // Windows desktop
+  //static const String baseUrl = "http://localhost:8080"; // Windows desktop
   // Emulator nie testowany
-  // static const String baseUrl = "http://10.0.2.2:8080";
+  static const String baseUrl = "http://10.0.2.2:8080";
 
   static Future<Map<String, dynamic>?> login(String username, String password) async {
     final url = Uri.parse("$baseUrl/login");

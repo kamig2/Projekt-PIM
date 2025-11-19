@@ -1,35 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-import 'package:recipe_app/screens/add_recipe_screen.dart'; 
-
+import 'package:recipe_app/models/recipe.dart';
+import 'package:recipe_app/models/user_model.dart';
+import 'package:recipe_app/services/recipe_service.dart';
+import 'package:recipe_app/screens/add_recipe_screen.dart';
 import 'package:recipe_app/screens/recipe_detail_screen.dart';
+import 'package:recipe_app/screens/recipe_image_loader.dart'; // Upewnij się, że masz ten plik
 
-
-// --- Model Danych ---
-//klasa do przechowywania informacji o przepisie
-class Recipe {
-  final String title;
-  final String duration;
-  final String imageUrl;
-  String get id => title;
-
-  Recipe({
-    required this.title,
-    required this.duration,
-    required this.imageUrl,
-  });
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-          other is Recipe && runtimeType == other.runtimeType && id == other.id;
-
-  @override
-  int get hashCode => id.hashCode;
-}
-
-// --- Główny Widget Ekranu ---
 class RecipeListScreen extends StatefulWidget {
   const RecipeListScreen({super.key});
 
@@ -38,86 +15,106 @@ class RecipeListScreen extends StatefulWidget {
 }
 
 class _RecipeListScreenState extends State<RecipeListScreen> {
-  // mock data
-  final List<Recipe> recipes = [
-    Recipe(
-      title: 'Baked potatoes',
-      duration: '30 min',
-      // linki do zdjęć
-      imageUrl:
-      'http://localhost:8080/upload/img.png', //pobieranie zdjęć z backendu
-    ),
-    Recipe(
-      title: 'Onion soup',
-      duration: '60 min',
-      imageUrl:
-      'https://www.thespruceeats.com/thmb/BYc5SJFHrCWFCRpTO5Z2IvMtrZs=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/easy-french-onion-soup-3062131-hero-01-2a93bd3c60084db5a8a8e1039c0e0a2f.jpg',
-    ),
-    Recipe(
-      title: 'Lasagne',
-      duration: '40 min',
-      imageUrl:
-      'https://www.pyszne.pl/foodwiki/uploads/sites/7/2018/03/lasagne.jpg',
-    ),
-    Recipe(
-      title: 'Chocolate cake',
-      duration: '55 min',
-      imageUrl:
-      'https://www.allrecipes.com/thmb/zb8muWE6CQ5XjclY_LQ2i-QwxN0=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/17981-one-bowl-chocolate-cake-iii-DDMFS-beauty-4x3-d2e182087e4b42a3a281a0a355ea60d1.jpg',
-    ),
-  ];
+  // --- STAN ZAKŁADKI "RECIPES" ---
+  List<Recipe> _allRecipes = [];
+  List<Recipe> _filteredRecipes = [];
+  bool _isLoading = true;
+  String? _errorMessage;
 
-  // Stan dla aktywnej zakładki w dolnej nawigacji
+  // --- STAN ZAKŁADKI "PROFILE" ---
+  List<Recipe> _myRecipes = []; // Przepisy z endpointu /userRecipes
+  User? _currentUser; // Dane z endpointu /users/logged/user
+  bool _isProfileLoading = false;
+
   int _selectedIndex = 0;
+  final TextEditingController _searchController = TextEditingController();
+  final List<Recipe> _favoriteRecipes = []; // Lokalne ulubione
 
-  // Lista do przechowywania ulubionych przepisów
-  final List<Recipe> _favoriteRecipes = [];
-
-  // Kontroler dla paska wyszukiwania
-  late TextEditingController _searchController;
-  // Lista przechowująca przefiltrowane przepisy
-  List<Recipe> _filteredRecipes = []; // Inicjalizowana w initState
-
-  // TODO: Zastąpić te dane prawdziwymi danymi z bazy
-  // te dane użyte w zakładce profilu
-  final String userName = "Jan";
-  final String userSurname = "Nowak";
+  static const Color primaryPurple = Color(0xFF2D0C57);
+  static const Color lightBackground = Color(0xFFFBFBFF);
 
   @override
   void initState() {
     super.initState();
-    // Inicjalizacja kontrolera wyszukiwania
-    _searchController = TextEditingController();
-    // Na starcie, przefiltrowana lista to pełna lista
-    _filteredRecipes = List.from(recipes);
-    // Dodajemy "słuchacza", który będzie reagował na zmiany w tekście
     _searchController.addListener(_filterRecipes);
+
+    // 1. Pobierz wszystkie przepisy na start
+    _fetchRecipes();
+
+    // 2. Pobierz dane profilowe w tle
+    _loadProfileData();
+  }
+
+  // --- POBIERANIE WSZYSTKICH PRZEPISÓW ---
+  Future<void> _fetchRecipes() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final recipes = await RecipeService.fetchAllRecipes();
+      setState(() {
+        _allRecipes = recipes;
+        _filteredRecipes = recipes;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = "Nie udało się pobrać danych.";
+        });
+      }
+    }
+  }
+
+  // --- POBIERANIE DANYCH PROFILU ---
+  Future<void> _loadProfileData() async {
+    setState(() {
+      _isProfileLoading = true;
+    });
+
+    try {
+      // A. Pobierz dane o użytkowniku (firstName, lastName)
+      final user = await RecipeService.fetchLoggedUserDetails();
+
+      // B. Pobierz przepisy tego użytkownika (Twoje przepisy)
+      // Endpoint: /api/recipes/userRecipes
+      final myRecipes = await RecipeService.fetchMyRecipes();
+
+      if (mounted) {
+        setState(() {
+          _currentUser = user;
+          _myRecipes = myRecipes;
+          _isProfileLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Błąd profilu: $e");
+      if (mounted) {
+        setState(() {
+          _isProfileLoading = false;
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
-    // Czyścimy "słuchacza" i kontroler, aby uniknąć wycieków pamięci
-    _searchController.removeListener(_filterRecipes);
     _searchController.dispose();
     super.dispose();
   }
 
-
-  // Funkcja filtrująca przepisy
   void _filterRecipes() {
-    // Pobieramy aktualny tekst z paska i zamieniamy na małe litery
     final query = _searchController.text.toLowerCase();
     setState(() {
-      // Tworzymy nową listę na podstawie głównej listy "recipes"
-      _filteredRecipes = recipes.where((recipe) {
+      _filteredRecipes = _allRecipes.where((recipe) {
         final titleLower = recipe.title.toLowerCase();
-        // Zwracamy prawdę, jeśli tytuł zawiera wpisany tekst
         return titleLower.contains(query);
       }).toList();
     });
   }
 
-  // Funkcja do przełączania ulubionych
   void _toggleFavorite(Recipe recipe) {
     setState(() {
       if (_favoriteRecipes.contains(recipe)) {
@@ -128,13 +125,9 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
     });
   }
 
-  // Funkcja do sprawdzania, czy przepis jest ulubiony
   bool _isFavorite(Recipe recipe) {
     return _favoriteRecipes.contains(recipe);
   }
-
-  static const Color primaryPurple = Color(0xFF2D0C57);
-  static const Color lightBackground = Color(0xFFFBFBFF); // Bardzo jasne tło
 
   @override
   Widget build(BuildContext context) {
@@ -143,47 +136,36 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          // Zakładka 0: Lista przepisów
-          _buildRecipeListTab(),
-          // Zakładka 1: Dodaj przepis
-          _buildAddTab(),
-          // Zakładka 2: Profil
-          _buildProfileTab(),
+          _buildRecipeListTab(), // 0
+          _buildAddTab(),        // 1
+          _buildProfileTab(),    // 2
         ],
       ),
-      // Dolny pasek nawigacji
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
+            if (index == 2) _loadProfileData(); // Odśwież profil przy wejściu
+            if (index == 0) _fetchRecipes();
           });
         },
         selectedItemColor: primaryPurple,
         unselectedItemColor: Colors.grey[400],
         showSelectedLabels: false,
         showUnselectedLabels: false,
-        backgroundColor: Colors.white, // Tło paska nawigacji
-        elevation: 10, // Cień paska nawigacji
-        type: BottomNavigationBarType.fixed, // Stały typ
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.grid_view_rounded),
-            label: 'Recipes',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline),
-            label: 'Add',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: 'Recipes'),
+          BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: 'Add'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
       ),
     );
   }
 
+  // --- WIDOK 1: LISTA PRZEPISÓW ---
   Widget _buildRecipeListTab() {
     return Scaffold(
       backgroundColor: lightBackground,
@@ -193,24 +175,29 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
         automaticallyImplyLeading: false,
         title: Text(
           'Recipes',
-          style: GoogleFonts.inter(
-            color: primaryPurple,
-            fontWeight: FontWeight.bold,
-            fontSize: 29,
-          ),
+          style: GoogleFonts.inter(color: primaryPurple, fontWeight: FontWeight.bold, fontSize: 29),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: primaryPurple),
+            onPressed: _fetchRecipes,
+          )
+        ],
       ),
       body: Column(
         children: [
-          // Pasek wyszukiwania
           _buildSearchBar(),
-          // Lista przepisów
           Expanded(
-            child: ListView.builder(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: primaryPurple))
+                : _errorMessage != null
+                ? Center(child: Text(_errorMessage!))
+                : _filteredRecipes.isEmpty
+                ? const Center(child: Text("Brak przepisów."))
+                : ListView.builder(
               padding: const EdgeInsets.all(0),
               itemCount: _filteredRecipes.length,
               itemBuilder: (context, index) {
-                // Budowanie pojedynczego elementu listy jako karty
                 return _buildRecipeCard(_filteredRecipes[index]);
               },
             ),
@@ -220,47 +207,19 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
     );
   }
 
-/*
-  Widget _buildAddTab() {
-    return Scaffold(
-      backgroundColor: lightBackground,
-      appBar: AppBar(
-        backgroundColor: lightBackground,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: Text(
-          'Add Recipe',
-          style: GoogleFonts.inter(
-            color: primaryPurple,
-            fontWeight: FontWeight.bold,
-            fontSize: 29,
-          ),
-        ),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Text(
-            'TODO: add recipe',
-            style: GoogleFonts.inter(fontSize: 16, color: Colors.grey.shade700),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
-    );
-  }
-*/
-
+  // --- WIDOK 2: DODAWANIE ---
   Widget _buildAddTab() {
     return AddRecipeScreen(
       onCancel: () {
         setState(() {
-          _selectedIndex = 0; // wróć do listy przepisów
+          _selectedIndex = 0;
+          _fetchRecipes();
         });
       },
     );
   }
 
+  // --- WIDOK 3: PROFIL ---
   Widget _buildProfileTab() {
     return Scaffold(
       backgroundColor: lightBackground,
@@ -268,131 +227,108 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
         backgroundColor: lightBackground,
         elevation: 0,
         automaticallyImplyLeading: false,
-        title: Text(
-          'Profile',
-          style: GoogleFonts.inter(
-            color: primaryPurple,
-            fontWeight: FontWeight.bold,
-            fontSize: 29,
-          ),
-        ),
+        title: Text('Profile', style: GoogleFonts.inter(color: primaryPurple, fontWeight: FontWeight.bold, fontSize: 29)),
+        actions: [
+          IconButton(
+              icon: const Icon(Icons.refresh, color: primaryPurple),
+              onPressed: _loadProfileData
+          )
+        ],
       ),
-      body: ListView(
+      body: _isProfileLoading
+          ? const Center(child: CircularProgressIndicator(color: primaryPurple))
+          : ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          // Sekcja z informacjami o użytkowniku
+          // 1. DANE UŻYTKOWNIKA
           Center(
             child: Column(
               children: [
-                Icon(Icons.person_pin_circle_rounded,
-                    size: 80, color: primaryPurple),
+                const Icon(Icons.account_circle, size: 90, color: primaryPurple),
                 const SizedBox(height: 12),
                 Text(
-                  '$userName $userSurname',
-                  style: GoogleFonts.inter(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: primaryPurple),
+                  _currentUser != null
+                      ? "${_currentUser!.firstName} ${_currentUser!.lastName}"
+                      : "Użytkownik",
+                  style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: primaryPurple),
+                ),
+                Text(
+                  _currentUser != null ? _currentUser!.username : "Brak danych",
+                  style: GoogleFonts.inter(fontSize: 14, color: Colors.grey),
                 ),
                 const SizedBox(height: 32),
               ],
             ),
           ),
 
-          // Sekcja z ulubionymi
-          Text(
-            'Your Favorites',
-            style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: primaryPurple),
+          // 2. LISTA PRZEPISÓW UŻYTKOWNIKA (z endpointu /userRecipes)
+          Row(
+            children: [
+              const Icon(Icons.restaurant_menu, color: primaryPurple),
+              const SizedBox(width: 8),
+              Text('My Recipes', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: primaryPurple)),
+            ],
           ),
           const SizedBox(height: 16),
-          // Budowanie listy ulubionych
-          _buildFavoritesList(),
 
-          // Przycisk wylogowania
+          if (_myRecipes.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                children: [
+                  Text(
+                    "Nie dodałeś jeszcze żadnych przepisów.",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(fontSize: 16, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            )
+          else
+            Column(
+              children: _myRecipes.map((recipe) => _buildRecipeCard(recipe)).toList(),
+            ),
+
           const SizedBox(height: 32),
+
+          // 3. PRZYCISK WYLOGOWANIA
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: primaryPurple,
+              backgroundColor: Colors.redAccent,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
             ),
             onPressed: () {
-              // Wyloguj i wróć do ekranu logowania, czyszcząc stos nawigacji
-              Navigator.of(context)
-                  .pushNamedAndRemoveUntil('/login', (route) => false);
+              Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
             },
-            child: Text('Log Out',
-                style: GoogleFonts.inter(
-                    fontSize: 16, fontWeight: FontWeight.bold)),
+            child: Text('Log Out', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
+          const SizedBox(height: 40),
         ],
       ),
     );
   }
 
-  Widget _buildFavoritesList() {
-    if (_favoriteRecipes.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Text(
-            "You haven't added any favorites yet.",
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(fontSize: 16, color: Colors.grey.shade600),
-          ),
-        ),
-      );
-    }
-
-    // Jeśli są ulubione, budujemy listę
-    return Column(
-      children:
-      _favoriteRecipes.map((recipe) => _buildRecipeCard(recipe)).toList(),
-    );
-  }
-
-  /// Buduje widget paska wyszukiwania
+  // --- WIDGETY POMOCNICZE ---
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       child: Container(
-        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(30.0),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: TextField(
           controller: _searchController,
           style: GoogleFonts.inter(fontSize: 16),
           decoration: InputDecoration(
             hintText: 'Search',
-            hintStyle: GoogleFonts.inter(
-              color: Colors.grey.shade500,
-              fontSize: 16,
-            ),
+            hintStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 16),
             prefixIcon: Icon(Icons.search, color: Colors.grey.shade500),
-            filled: true,
-            fillColor: Colors.transparent,
             border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            disabledBorder: InputBorder.none,
-            errorBorder: InputBorder.none,
-            focusedErrorBorder: InputBorder.none,
-            contentPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           ),
         ),
       ),
@@ -408,9 +344,7 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => RecipeDetailScreen(recipe: recipe),
-            ),
+            MaterialPageRoute(builder: (context) => RecipeDetailScreen(recipe: recipe)),
           );
         },
         child: Container(
@@ -418,13 +352,7 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16.0),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 2))],
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -432,56 +360,43 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
               // Obrazek
               ClipRRect(
                 borderRadius: BorderRadius.circular(12.0),
-                child: Image.network(
-                  recipe.imageUrl,
+                child: RecipeImageLoader(
+                  imageUrl: recipe.imageUrl,
                   width: 170,
                   height: 120,
-                  fit: BoxFit.cover,
                 ),
               ),
               const SizedBox(width: 16),
-              // Kolumna z tekstem i przyciskiem
+              // Opis
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       recipe.title,
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: primaryPurple,
-                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: primaryPurple),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       recipe.duration,
-                      style: GoogleFonts.inter(
-                        color: Colors.grey.shade700,
-                        fontSize: 16,
-                      ),
+                      style: GoogleFonts.inter(color: Colors.grey.shade700, fontSize: 16),
                     ),
                     const SizedBox(height: 12),
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12.0),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      child: IconButton(
-                        icon: Icon(
-                          isFavorite
-                              ? Icons.favorite
-                              : Icons.favorite_border,
-                          color: isFavorite
-                              ? primaryPurple
-                              : Colors.grey.shade500,
-                          size: 24,
+                    // Ikona ulubionych
+                    Align(
+                      alignment: Alignment.bottomRight,
+                      child: Container(
+                        width: 44, height: 44,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12.0),
+                          border: Border.all(color: Colors.grey[300]!),
                         ),
-                        onPressed: () {
-                          _toggleFavorite(recipe);
-                        },
+                        child: IconButton(
+                          icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border, color: isFavorite ? primaryPurple : Colors.grey.shade500, size: 24),
+                          onPressed: () => _toggleFavorite(recipe),
+                        ),
                       ),
                     )
                   ],
@@ -494,4 +409,3 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
     );
   }
 }
-
