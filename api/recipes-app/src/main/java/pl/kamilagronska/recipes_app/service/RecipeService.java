@@ -141,6 +141,12 @@ public class RecipeService {
             if (request.getIngredients() != null){
                 recipe.setIngredients(request.getIngredients());
             }
+            if (request.getPortion() != null){
+                recipe.setPortion(request.getPortion());
+            }
+            if (request.getPreparationTime() != null){
+                recipe.setPreparationTime(request.getPreparationTime());
+            }
             if (request.getFiles() != null){
                 deleteImages(recipe);
                 recipe.setImageUrls(saveImages(request.getFiles()));
@@ -197,6 +203,8 @@ public class RecipeService {
         return Recipe.builder()
                 .title(request.getTitle())
                 .ingredients(request.getIngredients())
+                .portion(request.getPortion())
+                .preparationTime(request.getPreparationTime())
                 .description(request.getDescription())
                 .user(getCurrentUser())
                 .date(LocalDate.now())
