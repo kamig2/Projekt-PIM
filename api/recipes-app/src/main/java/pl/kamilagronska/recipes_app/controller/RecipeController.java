@@ -64,10 +64,14 @@ public class RecipeController {
             produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<RecipeDto> addRecipe(@RequestParam(value = "title") String title,
                                                @RequestParam(value = "ingredients") String ingredients,
+                                               @RequestParam(value = "preparationTime") int preparationTime,
+                                               @RequestParam(value = "portion") int portion,
                                                @RequestParam("description") String description,
                                                @RequestParam(value = "files",required = false)List<MultipartFile> files) throws IOException {
         RecipeRequest request = RecipeRequest.builder()
                 .title(title)
+                .portion(portion)
+                .preparationTime(preparationTime)
                 .ingredients(ingredients)
                 .description(description)
                 .files(files)
@@ -81,15 +85,19 @@ public class RecipeController {
     public ResponseEntity<RecipeDto> updateRecipe(@PathVariable Long recipeId,
                                                   @RequestParam(value = "title",required = false) String title,
                                                   @RequestParam(value = "ingredients",required = false) String ingredients,
+                                                  @RequestParam(value = "preparationTime",required = false) Integer preparationTime,
+                                                  @RequestParam(value = "portion",required = false) Integer portion,
                                                   @RequestParam(value = "description",required = false) String description,
                                                   @RequestParam(value = "files",required = false)List<MultipartFile> files) throws IOException {
         RecipeRequest request = RecipeRequest.builder()
                 .title(title)
                 .ingredients(ingredients)
+                .preparationTime(preparationTime)
+                .portion(portion)
                 .description(description)
                 .files(files)
                 .build();
-        return ResponseEntity.ok(recipeService.updateRecipe(recipeId,request/*,files*/));
+        return ResponseEntity.ok(recipeService.updateRecipe(recipeId,request));
 
     }
     @DeleteMapping("/{recipeId}")

@@ -45,7 +45,7 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
       duration: '30 min',
       // linki do zdjęć
       imageUrl:
-      'https://cdn.loveandlemons.com/wp-content/uploads/2020/01/baked-potato.jpg',
+      'http://localhost:8080/upload/img.png', //pobieranie zdjęć z backendu
     ),
     Recipe(
       title: 'Onion soup',
