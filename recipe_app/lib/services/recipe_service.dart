@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:recipe_app/models/recipe.dart';
-import 'package:recipe_app/models/user_model.dart'; // Upewnij się, że masz ten plik (poniżej)
+import 'package:recipe_app/models/user_model.dart';
 
 class RecipeService {
   // --- KONFIGURACJA ADRESU ---
@@ -12,13 +12,13 @@ class RecipeService {
   static const String _allRecipesEndpoint = "/api/recipes";
 
   // --- TOKEN AUTORYZACJI ---
-  // Wkleiłem tu token z Twoich logów, żeby zadziałało "od ręki".
-  // Docelowo logowanie powinno ustawiać ten token przez setAuthToken().
-  static String? _userToken = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqYW5rbyIsImlhdCI6MTc2MzU3MjQzMSwiZXhwIjoxNzYzNjU4ODMxfQ.FXRPNATIxvDmD31op6f9elqzy6kBMfPyfcIxkPnOupA";
+  // ZMIANA: Usunięty sztywny token. Teraz domyślnie jest null.
+  static String? _userToken;
 
   // Metoda do ustawiania tokena po zalogowaniu
   static void setAuthToken(String token) {
     _userToken = token;
+    print("RecipeService: Token zaktualizowany.");
   }
 
   // Helper do nagłówków
@@ -52,14 +52,13 @@ class RecipeService {
     final url = Uri.parse("$baseUrl/api/recipes/userRecipes");
 
     try {
-      // Wysyłamy nagłówek Authorization
       final response = await http.get(url, headers: _authHeaders);
 
       if (response.statusCode == 200) {
         final List<dynamic> body = jsonDecode(utf8.decode(response.bodyBytes));
         return body.map((item) => Recipe.fromJson(item)).toList();
       } else if (response.statusCode == 403) {
-        throw Exception('Brak dostępu (403). Token może być nieważny.');
+        throw Exception('Brak dostępu (403). Token może być nieważny lub brak tokena.');
       } else {
         throw Exception('Błąd serwera: ${response.statusCode}');
       }

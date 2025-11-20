@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/token_storage.dart';
+import 'package:recipe_app/services/recipe_service.dart'; // Dodaj ten import!
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -97,10 +98,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       if (result != null) {
                         print("Zarejestrowano: $result");
-                        await TokenStorage.saveToken(result["token"]);
+                        String token = result["token"];
+
+                        // 1. Zapisz w storage
+                        await TokenStorage.saveToken(token);
+
+                        // 2. ZMIANA: Przekaż token do RecipeService
+                        RecipeService.setAuthToken(token);
+
                         Navigator.pushReplacementNamed(context, '/recipes');
                       } else {
                         print("Błąd rejestracji");
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Błąd rejestracji")),
+                        );
                       }
                     },
                     child: const Text('Sign Up'),

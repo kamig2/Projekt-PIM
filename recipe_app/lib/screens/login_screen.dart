@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:recipe_app/services/auth_service.dart';
-
+import 'package:recipe_app/services/recipe_service.dart'; // Dodaj ten import!
 import '../services/token_storage.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -50,7 +50,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
               child: Column(
-
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -89,12 +88,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       if (result != null) {
                         print("Zalogowano: $result");
-                        await TokenStorage.saveToken(result["token"]);
+                        String token = result["token"];
 
+                        // 1. Zapisz w storage (dla trwałości)
+                        await TokenStorage.saveToken(token);
+
+                        // 2. ZMIANA: Przekaż token do RecipeService (dla bieżącej sesji)
+                        RecipeService.setAuthToken(token);
 
                         Navigator.pushReplacementNamed(context, '/recipes');
                       } else {
                         print("Błąd logowania");
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Błąd logowania")),
+                        );
                       }
                     },
                     child: const Text('Sign In'),
