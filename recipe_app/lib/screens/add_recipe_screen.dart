@@ -124,6 +124,12 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                   filled: true,
                   fillColor: Colors.white,
                 ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Title is required';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 
@@ -242,6 +248,12 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                   fillColor: Colors.white,
                 ),
                 maxLines: 3,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Description is required';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 
@@ -401,6 +413,14 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
               ElevatedButton(
                 onPressed: () async {
                   if (_formKey.currentState!.validate()) {
+
+                    if (_ingredients.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please add at least one ingredient')),
+                      );
+                      return;
+                    }
+
                     try {
                       await RecipeService.uploadRecipe(
                         title: _titleController.text,
