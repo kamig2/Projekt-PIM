@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
+import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -23,12 +23,24 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
   final TextEditingController _ingredientController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final List<String> _ingredients = [];
-  int? _selectedHour;
-  int? _selectedMinute;
+  final ImagePicker _picker = ImagePicker();
+  final TextEditingController _servingsController = TextEditingController();
+  final TextEditingController _minutesController = TextEditingController();
 
   // pliki zdjęć
   List<File> _selectedFiles = [];         // mobilnie
   List<Uint8List> _selectedFilesWeb = []; // webowo
+
+  // Funkcja do zrobienia zdjęcia
+  Future<void> _takePhoto() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+    if (image != null) {
+      setState(() {
+        _selectedFiles.add(File(image.path)); // mobilnie
+        // jeśli web, użyj innego sposobu, np. image.bytes
+      });
+    }
+  }
 
  // Funkcja wyboru zdjęć
   Future<void> _pickFiles() async {
@@ -66,8 +78,8 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     _ingredientController.clear();
     _descriptionController.clear();
     _ingredients.clear();
-    _selectedHour = null;
-    _selectedMinute = null;
+    _minutesController.clear();
+    _servingsController.clear();
     _selectedFiles.clear();
     _selectedFilesWeb.clear();
     setState(() {});
@@ -231,100 +243,90 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Time
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Preparation time',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.grey[600],
-                    ),
+              // Servings
+              TextFormField(
+                controller: _servingsController,
+                decoration: InputDecoration(
+                  labelText: 'Number of servings',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Enter number of servings';
+                  if (int.tryParse(value) == null) return 'Must be a number';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
 
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          initialValue: _selectedHour,
-                          decoration: InputDecoration(
-                            labelText: 'Hours',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                          items: List.generate(
-                            24,
-                            (index) => DropdownMenuItem(
-                              value: index,
-                              child: Text('$index'),
-                            ),
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedHour = value;
-                            });
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          initialValue: _selectedMinute,
-                          decoration: InputDecoration(
-                            labelText: 'Minutes',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                          items: List.generate(
-                            60,
-                            (index) => DropdownMenuItem(
-                              value: index,
-                              child: Text('$index'),
-                            ),
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedMinute = value;
-                            });
-                          },
-                        ),
-                      ),
-                    ],
+
+// Only minutes
+              TextFormField(
+                controller: _minutesController,
+                decoration: InputDecoration(
+                  labelText: 'Preparation time (minutes)',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Enter time in minutes';
+                  if (int.tryParse(value) == null) return 'Must be a number';
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 
 
               // Photo upload 
-              OutlinedButton.icon(
-                onPressed: _pickFiles,
-                icon: const Icon(Icons.attach_file),
-                label: Text(
-                  kIsWeb
-                      ? (_selectedFilesWeb.isEmpty
-                          ? 'Select photos'
-                          : '${_selectedFilesWeb.length} photo(s) selected')
-                      : (_selectedFiles.isEmpty
-                          ? 'Select photos'
-                          : '${_selectedFiles.length} photo(s) selected'),
-                ),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _pickFiles,
+                      icon: const Icon(Icons.attach_file),
+                      label: Text(
+                        kIsWeb
+                            ? (_selectedFilesWeb.isEmpty
+                            ? 'Select photos'
+                            : '${_selectedFilesWeb.length} photo(s) selected')
+                            : (_selectedFiles.isEmpty
+                            ? 'Select photos'
+                            : '${_selectedFiles.length} photo(s) selected'),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _takePhoto,
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text('Take photo'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+
+
 
               const SizedBox(height: 12),
 
