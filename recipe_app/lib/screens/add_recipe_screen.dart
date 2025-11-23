@@ -24,8 +24,8 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   final List<String> _ingredients = [];
   final ImagePicker _picker = ImagePicker();
-  int? _selectedHour;
-  int? _selectedMinute;
+  final TextEditingController _servingsController = TextEditingController();
+  final TextEditingController _minutesController = TextEditingController();
 
   // pliki zdjęć
   List<File> _selectedFiles = [];         // mobilnie
@@ -78,8 +78,8 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     _ingredientController.clear();
     _descriptionController.clear();
     _ingredients.clear();
-    _selectedHour = null;
-    _selectedMinute = null;
+    _minutesController.clear();
+    _servingsController.clear();
     _selectedFiles.clear();
     _selectedFilesWeb.clear();
     setState(() {});
@@ -243,76 +243,44 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Time
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Preparation time',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.grey[600],
-                    ),
+              // Servings
+              TextFormField(
+                controller: _servingsController,
+                decoration: InputDecoration(
+                  labelText: 'Number of servings',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Enter number of servings';
+                  if (int.tryParse(value) == null) return 'Must be a number';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
 
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          initialValue: _selectedHour,
-                          decoration: InputDecoration(
-                            labelText: 'Hours',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                          items: List.generate(
-                            24,
-                            (index) => DropdownMenuItem(
-                              value: index,
-                              child: Text('$index'),
-                            ),
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedHour = value;
-                            });
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          initialValue: _selectedMinute,
-                          decoration: InputDecoration(
-                            labelText: 'Minutes',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                          items: List.generate(
-                            60,
-                            (index) => DropdownMenuItem(
-                              value: index,
-                              child: Text('$index'),
-                            ),
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedMinute = value;
-                            });
-                          },
-                        ),
-                      ),
-                    ],
+
+// Only minutes
+              TextFormField(
+                controller: _minutesController,
+                decoration: InputDecoration(
+                  labelText: 'Preparation time (minutes)',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Enter time in minutes';
+                  if (int.tryParse(value) == null) return 'Must be a number';
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 
@@ -342,19 +310,22 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed: _takePhoto,
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Take photo'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _takePhoto,
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text('Take photo'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
                     ),
                   ),
                 ],
               ),
+
 
 
               const SizedBox(height: 12),
