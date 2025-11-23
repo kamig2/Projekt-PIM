@@ -5,6 +5,8 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:file_picker/file_picker.dart';
+import 'package:recipe_app/services/recipe_service.dart';
+
 
 class AddRecipeScreen extends StatefulWidget {
   final VoidCallback? onCancel;
@@ -397,9 +399,29 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
 
               // Upload button
               ElevatedButton(
-                onPressed: () {
-                  _resetForm();
-                  widget.onCancel?.call();
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    try {
+                      await RecipeService.uploadRecipe(
+                        title: _titleController.text,
+                        ingredients: _ingredients.join(', '),
+                        description: _descriptionController.text,
+                        preparationTime: int.parse(_minutesController.text),
+                        portion: int.parse(_servingsController.text),
+                        files: _selectedFiles,
+                        filesWeb: _selectedFilesWeb,
+                      );
+                      _resetForm();
+                      widget.onCancel?.call();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Recipe uploaded successfully!')),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error uploading recipe: $e')),
+                      );
+                    }
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:recipe_app/models/recipe.dart';
 import 'package:recipe_app/models/user_model.dart';
@@ -10,6 +11,7 @@ class RecipeService {
   static const String _ip = "10.0.2.2";
   static const String baseUrl = "http://$_ip:8080";
   static const String _allRecipesEndpoint = "/api/recipes";
+  static const String addRecipeEndpoint = "/api/recipes/add";
 
   // --- TOKEN AUTORYZACJI ---
   // ZMIANA: Usunięty sztywny token. Teraz domyślnie jest null.
@@ -100,4 +102,54 @@ class RecipeService {
       return null;
     }
   }
+
+  static Future<bool> uploadRecipe({
+  required String title,
+  required String ingredients,
+  required String description,
+  required int preparationTime,
+  required int portion,
+  required List<File> files,
+  required List<Uint8List> filesWeb,
+  }) async {
+  final url = Uri.parse("$baseUrl/api/recipes/add");
+
+  final request = http.MultipartRequest("POST", url);
+
+// Token jeśli jest
+  if (_userToken != null) {
+  request.headers["Authorization"] = "Bearer $_userToken";
+  }
+
+// Pola tekstowe
+  request.fields["title"] = title;
+  request.fields["ingredients"] = ingredients;
+  request.fields["description"] = description;
+  request.fields["preparationTime"] = preparationTime.toString();
+  request.fields["portion"] = portion.toString();
+
+// Zdjęcia – web
+  for (int i = 0; i < filesWeb.length; i++) {
+  request.files.add(
+  http.MultipartFile.fromBytes(
+  'files',
+  filesWeb[i],
+  filename: "image_$i.jpg",
+  ),
+  );
+  }
+
+// Zdjęcia – mobile
+  for (var file in files) {
+  request.files.add(
+  await http.MultipartFile.fromPath('files', file.path),
+  );
+  }
+
+  final response = await request.send();
+  return response.statusCode == 200 || response.statusCode == 201;
+  }
+
 }
+
+
