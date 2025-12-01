@@ -5,7 +5,7 @@ import 'package:recipe_app/models/user_model.dart';
 import 'package:recipe_app/services/recipe_service.dart';
 import 'package:recipe_app/screens/add_recipe_screen.dart';
 import 'package:recipe_app/screens/recipe_detail_screen.dart';
-import 'package:recipe_app/screens/recipe_image_loader.dart'; // Upewnij się, że masz ten plik
+import 'package:recipe_app/screens/recipe_image_loader.dart';
 
 class RecipeListScreen extends StatefulWidget {
   const RecipeListScreen({super.key});
@@ -22,8 +22,8 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
   String? _errorMessage;
 
   // --- STAN ZAKŁADKI "PROFILE" ---
-  List<Recipe> _myRecipes = []; // Przepisy z endpointu /userRecipes
-  User? _currentUser; // Dane z endpointu /users/logged/user
+  List<Recipe> _myRecipes = [];
+  User? _currentUser;
   bool _isProfileLoading = false;
 
   int _selectedIndex = 0;
@@ -75,11 +75,10 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
     });
 
     try {
-      // A. Pobierz dane o użytkowniku (firstName, lastName)
+      // A. Pobierz dane o użytkowniku
       final user = await RecipeService.fetchLoggedUserDetails();
 
-      // B. Pobierz przepisy tego użytkownika (Twoje przepisy)
-      // Endpoint: /api/recipes/userRecipes
+      // B. Pobierz przepisy tego użytkownika
       final myRecipes = await RecipeService.fetchMyRecipes();
 
       if (mounted) {
@@ -97,6 +96,69 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
         });
       }
     }
+  }
+
+  // --- NOWE: USUWANIE PRZEPISU ---
+  Future<void> _deleteRecipe(Recipe recipe) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Recipe'),
+        content: Text('Are you sure you want to delete "${recipe.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await RecipeService.deleteRecipe(recipe.id);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Recipe deleted successfully')),
+          );
+          // Odśwież obie listy, bo usunięty przepis mógł być wszędzie
+          _loadProfileData();
+          _fetchRecipes();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting recipe: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  // --- NOWE: EDYCJA PRZEPISU ---
+  void _editRecipe(Recipe recipe) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddRecipeScreen(
+          recipeToEdit: recipe,
+          onCancel: () {
+            // Po anulowaniu lub zapisie w AddRecipeScreen po prostu wracamy
+            Navigator.pop(context);
+          },
+        ),
+      ),
+    ).then((_) {
+      // Po powrocie z ekranu edycji odświeżamy dane
+      _loadProfileData();
+      _fetchRecipes();
+    });
   }
 
   @override
@@ -146,7 +208,7 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
-            if (index == 2) _loadProfileData(); // Odśwież profil przy wejściu
+            if (index == 2) _loadProfileData();
             if (index == 0) _fetchRecipes();
           });
         },
@@ -165,7 +227,7 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
     );
   }
 
-  // --- WIDOK 1: LISTA PRZEPISÓW ---
+  // --- WIDOK 1: LISTA PRZEPISÓW (GŁÓWNA) ---
   Widget _buildRecipeListTab() {
     return Scaffold(
       backgroundColor: lightBackground,
@@ -198,6 +260,7 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
               padding: const EdgeInsets.all(0),
               itemCount: _filteredRecipes.length,
               itemBuilder: (context, index) {
+                // Tutaj używamy zwykłej karty (z serduszkiem)
                 return _buildRecipeCard(_filteredRecipes[index]);
               },
             ),
@@ -261,7 +324,7 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
             ),
           ),
 
-          // 2. LISTA PRZEPISÓW UŻYTKOWNIKA (z endpointu /userRecipes)
+          // 2. LISTA PRZEPISÓW UŻYTKOWNIKA
           Row(
             children: [
               const Icon(Icons.restaurant_menu, color: primaryPurple),
@@ -286,7 +349,8 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
             )
           else
             Column(
-              children: _myRecipes.map((recipe) => _buildRecipeCard(recipe)).toList(),
+              // ZMIANA: Tutaj używamy karty z przyciskami Edytuj/Usuń
+              children: _myRecipes.map((recipe) => _buildProfileRecipeCard(recipe)).toList(),
             ),
 
           const SizedBox(height: 32),
@@ -311,6 +375,7 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
   }
 
   // --- WIDGETY POMOCNICZE ---
+
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
@@ -335,6 +400,7 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
     );
   }
 
+  // 1. ZWYKŁA KARTA (Dla zakładki "Recipes")
   Widget _buildRecipeCard(Recipe recipe) {
     final bool isFavorite = _isFavorite(recipe);
 
@@ -404,6 +470,78 @@ class _RecipeListScreenState extends State<RecipeListScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // 2. KARTA PROFILOWA (Dla zakładki "Profile" - z przyciskami Edytuj/Usuń)
+  Widget _buildProfileRecipeCard(Recipe recipe) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16.0),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 2))],
+        ),
+        child: Column(
+          children: [
+            // GÓRA KARTY (Kliknięcie otwiera detale)
+            GestureDetector(
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => RecipeDetailScreen(recipe: recipe)));
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12.0),
+                      child: RecipeImageLoader(imageUrl: recipe.imageUrl, width: 100, height: 80), // Mniejsze zdjęcie w profilu
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(recipe.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: primaryPurple)),
+                          const SizedBox(height: 8),
+                          Text(recipe.duration, style: GoogleFonts.inter(color: Colors.grey.shade700, fontSize: 14)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // DÓŁ KARTY: PRZYCISKI EDYCJI I USUWANIA
+            const Divider(height: 1),
+            Row(
+              children: [
+                // Przycisk Edycji
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => _editRecipe(recipe),
+                    icon: const Icon(Icons.edit, size: 18, color: primaryPurple),
+                    label: Text("Edit", style: GoogleFonts.inter(color: primaryPurple, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                // Pionowa linia oddzielająca
+                Container(width: 1, height: 24, color: Colors.grey.shade300),
+                // Przycisk Usuwania
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => _deleteRecipe(recipe),
+                    icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                    label: Text("Delete", style: GoogleFonts.inter(color: Colors.red, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

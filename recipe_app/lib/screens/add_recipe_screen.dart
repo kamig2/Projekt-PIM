@@ -6,12 +6,13 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:file_picker/file_picker.dart';
 import 'package:recipe_app/services/recipe_service.dart';
-
+import 'package:recipe_app/models/recipe.dart';
 
 class AddRecipeScreen extends StatefulWidget {
   final VoidCallback? onCancel;
+  final Recipe? recipeToEdit;
 
-  const AddRecipeScreen({super.key, this.onCancel});
+  const AddRecipeScreen({super.key, this.onCancel, this.recipeToEdit});
 
   @override
   State<AddRecipeScreen> createState() => _AddRecipeScreenState();
@@ -20,38 +21,85 @@ class AddRecipeScreen extends StatefulWidget {
 class _AddRecipeScreenState extends State<AddRecipeScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  late TextEditingController _titleController;
+  late TextEditingController _ingredientController;
+  late TextEditingController _descriptionController;
+  late TextEditingController _servingsController;
+  late TextEditingController _minutesController;
 
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _ingredientController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
   final List<String> _ingredients = [];
   final ImagePicker _picker = ImagePicker();
-  final TextEditingController _servingsController = TextEditingController();
-  final TextEditingController _minutesController = TextEditingController();
 
-  // pliki zdjęć
-  List<File> _selectedFiles = [];         // mobilnie
-  List<Uint8List> _selectedFilesWeb = []; // webowo
+  List<File> _selectedFiles = [];
+  List<Uint8List> _selectedFilesWeb = [];
 
-  // Funkcja do zrobienia zdjęcia
+  String? _existingImageUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _initControllers();
+  }
+
+  // Wydzielona metoda inicjalizacji, aby kod był czystszy
+  void _initControllers() {
+    _titleController = TextEditingController();
+    _ingredientController = TextEditingController();
+    _descriptionController = TextEditingController();
+    _servingsController = TextEditingController();
+    _minutesController = TextEditingController();
+
+    if (widget.recipeToEdit != null) {
+      final r = widget.recipeToEdit!;
+      _titleController.text = r.title;
+      _descriptionController.text = r.description;
+      _minutesController.text = r.duration.replaceAll(RegExp(r'[^0-9]'), '');
+      _servingsController.text = r.portion.toString();
+      _existingImageUrl = r.imageUrl;
+
+      if (r.ingredients.isNotEmpty) {
+        _ingredients.addAll(r.ingredients.split(', '));
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _ingredientController.dispose();
+    _descriptionController.dispose();
+    _servingsController.dispose();
+    _minutesController.dispose();
+    super.dispose();
+  }
+
+  // --- NOWE: FUNKCJA CZYSZCZĄCA FORMULARZ ---
+  void _clearForm() {
+    _titleController.clear();
+    _ingredientController.clear();
+    _descriptionController.clear();
+    _servingsController.clear();
+    _minutesController.clear();
+    setState(() {
+      _ingredients.clear();
+      _selectedFiles.clear();
+      _selectedFilesWeb.clear();
+      _existingImageUrl = null;
+    });
+  }
+
   Future<void> _takePhoto() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.camera);
     if (image != null) {
       setState(() {
-        _selectedFiles.add(File(image.path)); // mobilnie
-        // jeśli web, użyj innego sposobu, np. image.bytes
+        _selectedFiles.add(File(image.path));
+        _existingImageUrl = null;
       });
     }
   }
 
- // Funkcja wyboru zdjęć
   Future<void> _pickFiles() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-      allowMultiple: true,
-      withData: kIsWeb,
-    );
-
+    final result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: true, withData: kIsWeb);
     if (result != null) {
       setState(() {
         if (kIsWeb) {
@@ -59,11 +107,11 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
         } else {
           _selectedFiles.addAll(result.paths.map((path) => File(path!)).toList());
         }
+        _existingImageUrl = null;
       });
     }
   }
 
-  // Usunięcie miniatury
   void _removeFile(int index) {
     setState(() {
       if (kIsWeb) {
@@ -74,416 +122,152 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     });
   }
 
-  // Usuwanie danych po przeslaniu lub odrzuceniu nowego przepisu
-  void _resetForm() {
-    _titleController.clear();
-    _ingredientController.clear();
-    _descriptionController.clear();
-    _ingredients.clear();
-    _minutesController.clear();
-    _servingsController.clear();
-    _selectedFiles.clear();
-    _selectedFilesWeb.clear();
-    setState(() {});
+  Future<void> _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      if (_ingredients.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please add at least one ingredient')));
+        return;
+      }
+
+      try {
+        if (widget.recipeToEdit == null) {
+          // TRYB DODAWANIA
+          await RecipeService.uploadRecipe(
+            title: _titleController.text,
+            ingredients: _ingredients.join(', '),
+            description: _descriptionController.text,
+            preparationTime: int.parse(_minutesController.text),
+            portion: int.parse(_servingsController.text),
+            files: _selectedFiles,
+            filesWeb: _selectedFilesWeb,
+          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Recipe uploaded successfully!')));
+        } else {
+          // TRYB EDYCJI
+          await RecipeService.updateRecipe(
+            id: widget.recipeToEdit!.id,
+            title: _titleController.text,
+            ingredients: _ingredients.join(', '),
+            description: _descriptionController.text,
+            preparationTime: int.parse(_minutesController.text),
+            portion: int.parse(_servingsController.text),
+            files: _selectedFiles,
+            filesWeb: _selectedFilesWeb,
+          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Recipe updated successfully!')));
+        }
+
+        // --- TUTAJ JEST KLUCZOWA ZMIANA ---
+        // Czyścimy formularz po sukcesie, zanim przełączymy zakładkę
+        _clearForm();
+
+        widget.onCancel?.call();
+
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     const primaryPurple = Color(0xFF2D0C57);
-    const lightBackground = Color(0xFFFBFBFF);
+    final isEditing = widget.recipeToEdit != null;
 
     return Scaffold(
-      backgroundColor: lightBackground,
+      backgroundColor: const Color(0xFFFBFBFF),
       appBar: AppBar(
-        backgroundColor: lightBackground,
-        elevation: 0,
-        title: Text(
-          'Add a recipe',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-            color: primaryPurple,
-          ),
-        ),
+        title: Text(isEditing ? 'Edit Recipe' : 'Add a recipe',
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: primaryPurple)),
         centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: isEditing ? IconButton(
+          icon: const Icon(Icons.arrow_back, color: primaryPurple),
+          onPressed: () => Navigator.of(context).pop(),
+        ) : null,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Title
               TextFormField(
                 controller: _titleController,
-                decoration: InputDecoration(
-                  labelText: 'Title',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Title is required';
-                  }
-                  return null;
-                },
+                decoration: InputDecoration(labelText: 'Title', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), filled: true, fillColor: Colors.white),
+                validator: (val) => val!.isEmpty ? 'Required' : null,
               ),
               const SizedBox(height: 16),
 
-              // Ingredients
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Ingredients',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _ingredientController,
-                          decoration: InputDecoration(
-                            labelText: 'Add ingredient',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Add button
-                      ElevatedButton(
-                        onPressed: () {
-                          final ingredient = _ingredientController.text.trim();
-                          if (ingredient.isNotEmpty) {
-                            setState(() {
-                              _ingredients.add(ingredient);
-                              _ingredientController.clear();
-                            });
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryPurple,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-                          elevation: 0,
-                          minimumSize: const Size(0, 56),
-                        ),
-                        child: Text(
-                          'Add',
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Wyświetlanie dodanych składników
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: _ingredients.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final ing = entry.value;
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '• $ing',
-                                style: const TextStyle(fontSize: 16),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, size: 18, color: Colors.grey),
-                              onPressed: () {
-                                setState(() {
-                                  _ingredients.removeAt(index);
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 16),
-                ],
-              ),
-
-
-
-              // Description
-              TextFormField(
-                controller: _descriptionController,
-                decoration: InputDecoration(
-                  labelText: 'Description',
-                  alignLabelWithHint: true, 
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                maxLines: 3,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Description is required';
-                  }
-                  return null;
-                },
-              ),
+              Row(children: [
+                Expanded(child: TextFormField(controller: _ingredientController, decoration: InputDecoration(labelText: 'Ingredient', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), filled: true, fillColor: Colors.white))),
+                IconButton(icon: const Icon(Icons.add_circle, color: primaryPurple), onPressed: () {
+                  if(_ingredientController.text.isNotEmpty) setState(() { _ingredients.add(_ingredientController.text); _ingredientController.clear(); });
+                })
+              ]),
+              Wrap(spacing: 8, children: _ingredients.map((e) => Chip(label: Text(e), onDeleted: () => setState(() => _ingredients.remove(e)))).toList()),
               const SizedBox(height: 16),
 
-              // Servings
-              TextFormField(
-                controller: _servingsController,
-                decoration: InputDecoration(
-                  labelText: 'Number of servings',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Enter number of servings';
-                  if (int.tryParse(value) == null) return 'Must be a number';
-                  return null;
-                },
-              ),
+              TextFormField(controller: _descriptionController, maxLines: 3, decoration: InputDecoration(labelText: 'Description', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), filled: true, fillColor: Colors.white)),
               const SizedBox(height: 16),
 
-
-// Only minutes
-              TextFormField(
-                controller: _minutesController,
-                decoration: InputDecoration(
-                  labelText: 'Preparation time (minutes)',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Enter time in minutes';
-                  if (int.tryParse(value) == null) return 'Must be a number';
-                  return null;
-                },
-              ),
+              Row(children: [
+                Expanded(child: TextFormField(controller: _servingsController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Servings', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), filled: true, fillColor: Colors.white))),
+                const SizedBox(width: 10),
+                Expanded(child: TextFormField(controller: _minutesController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Minutes', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), filled: true, fillColor: Colors.white))),
+              ]),
               const SizedBox(height: 16),
 
-
-              // Photo upload 
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _pickFiles,
-                      icon: const Icon(Icons.attach_file),
-                      label: Text(
-                        kIsWeb
-                            ? (_selectedFilesWeb.isEmpty
-                            ? 'Select photos'
-                            : '${_selectedFilesWeb.length} photo(s) selected')
-                            : (_selectedFiles.isEmpty
-                            ? 'Select photos'
-                            : '${_selectedFiles.length} photo(s) selected'),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _takePhoto,
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text('Take photo'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
+                  OutlinedButton.icon(onPressed: _pickFiles, icon: const Icon(Icons.image), label: const Text("Gallery")),
+                  OutlinedButton.icon(onPressed: _takePhoto, icon: const Icon(Icons.camera_alt), label: const Text("Camera")),
                 ],
               ),
 
+              const SizedBox(height: 10),
+              if (isEditing && _existingImageUrl != null && _existingImageUrl!.isNotEmpty && _selectedFiles.isEmpty && _selectedFilesWeb.isEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(_existingImageUrl!, height: 100, width: 100, fit: BoxFit.cover),
+                ),
 
-
-              const SizedBox(height: 12),
-
-              // Miniaturki zdjęć
-              if ((kIsWeb && _selectedFilesWeb.isNotEmpty) ||
-                  (!kIsWeb && _selectedFiles.isNotEmpty))
+              if (_selectedFiles.isNotEmpty || _selectedFilesWeb.isNotEmpty)
                 SizedBox(
                   height: 100,
                   child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: kIsWeb ? _selectedFilesWeb.length : _selectedFiles.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Stack(
-                          alignment: Alignment.topRight,
+                      scrollDirection: Axis.horizontal,
+                      itemCount: kIsWeb ? _selectedFilesWeb.length : _selectedFiles.length,
+                      itemBuilder: (context, index) {
+                        return Padding(padding: const EdgeInsets.only(right: 8), child: Stack(
                           children: [
-
-                            // Miniaturka zdjęcia
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: kIsWeb
-                                  ? Image.memory(
-                                      _selectedFilesWeb[index],
-                                      width: 100,
-                                      height: 100,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Image.file(
-                                      _selectedFiles[index],
-                                      width: 100,
-                                      height: 100,
-                                      fit: BoxFit.cover,
-                                    ),
-                            ),
-
-                          // Przycisk X do usuwania zdjęcia
-                            Positioned(
-                              top: 4,
-                              right: 4,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Color.fromRGBO(0, 0, 0, 0.6),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: InkWell(
-                                  onTap: () => _removeFile(index),
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(4),
-                                    child: Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                            kIsWeb
+                                ? Image.memory(_selectedFilesWeb[index], width: 100, height: 100, fit: BoxFit.cover)
+                                : Image.file(_selectedFiles[index], width: 100, height: 100, fit: BoxFit.cover),
+                            Positioned(top: 0, right: 0, child: GestureDetector(onTap: () => _removeFile(index), child: const Icon(Icons.cancel, color: Colors.red))),
                           ],
-                        ),
-                      );
-                    },
+                        ));
+                      }
                   ),
                 ),
-
 
               const SizedBox(height: 24),
-
-              // Upload button
               ElevatedButton(
-                onPressed: () async {
-                  if (_formKey.currentState!.validate()) {
-
-                    if (_ingredients.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please add at least one ingredient')),
-                      );
-                      return;
-                    }
-
-                    try {
-                      await RecipeService.uploadRecipe(
-                        title: _titleController.text,
-                        ingredients: _ingredients.join(', '),
-                        description: _descriptionController.text,
-                        preparationTime: int.parse(_minutesController.text),
-                        portion: int.parse(_servingsController.text),
-                        files: _selectedFiles,
-                        filesWeb: _selectedFilesWeb,
-                      );
-                      _resetForm();
+                onPressed: _submitForm,
+                style: ElevatedButton.styleFrom(backgroundColor: primaryPurple, minimumSize: const Size(double.infinity, 50)),
+                child: Text(isEditing ? 'Save Changes' : 'Upload Recipe', style: const TextStyle(color: Colors.white)),
+              ),
+              if (!isEditing)
+                TextButton(
+                    onPressed: () {
+                      // --- TUTAJ TEŻ CZYŚCIMY ---
+                      _clearForm();
                       widget.onCancel?.call();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Recipe uploaded successfully!')),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error uploading recipe: $e')),
-                      );
-                    }
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  backgroundColor: primaryPurple,
+                    },
+                    child: const Text("Cancel")
                 ),
-                child: Text(
-                  'Upload',
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // Cancel button
-              OutlinedButton(
-                onPressed: () {
-                  _resetForm();
-                  widget.onCancel?.call();
-                },
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  side: const BorderSide(color: Color(0xFF2D0C57)), 
-                ),
-                child: Text(
-                  'Cancel',
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: const Color(0xFF2D0C57),
-                  ),
-                ),
-              ),
-
             ],
           ),
         ),
@@ -491,11 +275,3 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     );
   }
 }
-
-
-
-
-
-
-
-
