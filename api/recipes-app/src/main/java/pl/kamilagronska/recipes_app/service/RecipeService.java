@@ -190,6 +190,7 @@ public class RecipeService {
                 .recipeId(recipe.getRecipeId())
                 .title(recipe.getTitle())
                 .ingredients(recipe.getIngredients())
+                .portion(recipe.getPortion())
                 .description(recipe.getDescription())
                 .username(recipe.getUser().getUsername())
                 .rating(recipe.getRating())
