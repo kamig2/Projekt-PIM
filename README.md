@@ -21,6 +21,3 @@
 ### C2
 <img width="276" height="796" alt="c2" src="https://github.com/user-attachments/assets/71d766f8-6121-460f-8a86-3bc2d1a9970c" />
 
-### C3
-<img width="1410" height="816" alt="Zrzut ekranu 2025-10-12 125237" src="https://github.com/user-attachments/assets/e2b2a6b2-20ff-4af7-9270-1a9605d3237d" />
-<img width="552" height="906" alt="c3-spring" src="https://github.com/user-attachments/assets/53edd268-f190-4184-9dbe-e128b8fec364" />
